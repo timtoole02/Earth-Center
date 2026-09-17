@@ -80,7 +80,7 @@ Gravity uses velocity Verlet integration with steps no larger than 0.2 simulated
 
 ### Engineering assumptions
 
-The straight shaft is supported and insulated, and the capsule remains on its axis. Rotation, Coriolis forces, collisions, heating, pressure, and structural failure are omitted. The transparent observation tube exposes an illuminated artistic cross-section. Mineral shapes, glowing seams, metal flow, and inner-core crystal patterns are illustrative, not imagery of Earth’s interior. The mantle is mostly solid rock; the outer core is liquid and the inner core is solid. Capsule sounds are illustrative. The shaft view compresses distance at high speeds for comfortable viewing; the cutaway position and instruments use physical coordinates. This is an experiment in gravitational motion, not a feasible tunnel design.
+The straight shaft is supported and insulated, and the capsule remains on its axis. Rotation, Coriolis forces, collisions, heating, pressure, and structural failure are omitted. The transparent observation tube exposes an illuminated artistic cross-section. Mineral shapes, glowing seams, metal flow, and inner-core crystal patterns are illustrative, not imagery of Earth’s interior. The mantle is mostly solid rock; the outer core is liquid and the inner core is solid. Capsule sounds are illustrative. The shaft uses a fixed display scale of 10 physical meters per scene unit. Glass supports, geology, and minerals advance from the actual simulated distance, including playback-rate changes and the ship slowdown. Fast travel becomes streaks instead of flickering repeating details; pausing restores a sharp view. The cutaway position and instruments use physical coordinates. This is an experiment in gravitational motion, not a feasible tunnel design.
 
 Background reading: [Klotz, _The Gravity Tunnel in a Non-Uniform Earth_](https://arxiv.org/abs/1308.1342) and [NASA: Earth facts](https://science.nasa.gov/earth/facts/).
 
@@ -101,6 +101,7 @@ js/physics.js            Enclosed mass, gravity, potential, integration, forecas
 js/world.js              Earth cutaway, observation tube, camera, reused Earth texture
 js/interior.js           Animated geology, glass, minerals, and buried spaceship
 js/arrival.js            Space arrival, visitor complex, guests, and capsule boarding
+js/visual-motion.js      Fixed distance mapping and high-speed detail blending
 js/main.js               Expedition state, controls, milestones, telemetry, map
 js/audio.js              Procedural capsule ambience
 assets/ / vendor/        Earth texture and Three.js

@@ -397,7 +397,11 @@ function frame(now) {
     requestAnimationFrame(frame);
     return;
   }
+  let distanceTraveled = 0,
+    simulationSeconds = 0;
   if (running) {
+    const previousPosition = state.x,
+      previousTime = state.time;
     const previousTurns = state.turns;
     const depth = R - Math.abs(state.x);
     const shipFlyby =
@@ -416,6 +420,8 @@ function frame(now) {
         `UNSCHEDULED ARCHAEOLOGY · ${playback}×`;
     } else $("mission-status").textContent = "EXPEDITION IN PROGRESS";
     step(state, dt * playback, { model, air, stopAtAntipode: !completed });
+    distanceTraveled = previousPosition - state.x;
+    simulationSeconds = state.time - previousTime;
     if (
       !air &&
       !completed &&
@@ -437,7 +443,7 @@ function frame(now) {
     audio.update(Math.abs(state.v), running);
   }
   if (now > toastUntil) $("toast").classList.remove("show");
-  world.render(state, dt, running);
+  world.render(state, dt, running, distanceTraveled, simulationSeconds);
   requestAnimationFrame(frame);
 }
 document.body.classList.add("cinematic");

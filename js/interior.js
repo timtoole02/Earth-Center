@@ -58,6 +58,7 @@ export class Interior {
       uTime: { value: 0 },
       uShip: { value: 0 },
       uShipZ: { value: -80 },
+      uBlur: { value: 0 },
     };
     this.material = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
@@ -74,7 +75,7 @@ export class Interior {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.);
         }`,
       fragmentShader: `
-        uniform float uStage, uTravel, uTime, uShip, uShipZ;
+        uniform float uStage, uTravel, uTime, uShip, uShipZ, uBlur;
         varying vec3 vRock;
         float hash(vec3 p) { return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
         float noise(vec3 p) {
@@ -126,6 +127,14 @@ export class Interior {
           col=mix(col,lower,clamp(uStage-1.,0.,1.));
           col=mix(col,outer,clamp(uStage-2.,0.,1.));
           col=mix(col,inner,clamp(uStage-3.,0.,1.));
+          // At high travel speeds, unresolved detail becomes axial motion streaks.
+          // This avoids strobing from sampling hundreds of rock seams per frame.
+          float axial=fbm(vec3(p.xy*.35,0.));
+          vec3 blurred=mix(vec3(.10,.15,.16),vec3(.38,.16,.04),clamp(uStage,0.,1.));
+          blurred=mix(blurred,vec3(.55,.23,.04),clamp(uStage-1.,0.,1.));
+          blurred=mix(blurred,vec3(.8,.4,.075),clamp(uStage-2.,0.,1.));
+          blurred=mix(blurred,vec3(.58,.39,.15),clamp(uStage-3.,0.,1.));
+          col=mix(col,blurred*(.7+axial*.7),uBlur);
           // Fade far geometry into a continuous dark horizon, avoiding a hard end cap.
           float distanceInto=max(0.,125.-vRock.y);
           col *= .42;
@@ -257,9 +266,22 @@ export class Interior {
     this.ship.add(sign);
     this.ship.position.y = 16;
     scene.add(this.ship);
-    this.update(0, 0, false, 0);
+    this.streakMaterial = new THREE.MeshBasicMaterial({
+      color: 0xa4e9e2,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    this.streaks = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.024, 0.024, 1),
+      this.streakMaterial,
+      120,
+    );
+    this.streaks.frustumCulled = false;
+    scene.add(this.streaks);
+    this.update(0, { distance: 0, speed: 0, blur: 0 }, 0);
   }
-  update(depth, dt, running, velocity) {
+  update(depth, motion, simulationSeconds) {
     const appearance = Math.max(
       0,
       Math.min(1, (depth - 3000) / 5000, (35000 - depth) / 5000),
@@ -269,13 +291,29 @@ export class Interior {
     this.ship.position.z =
       -70 + Math.max(0, Math.min(1, (depth - 3000) / 32000)) * 100;
     this.uniforms.uShipZ.value = this.ship.position.z;
-    const movement = running
-      ? dt *
-        Math.min(24, Math.sqrt(Math.abs(velocity)) * 0.24) *
-        Math.sign(-velocity)
-      : 0;
-    this.travel += movement;
-    if (running) this.clock += dt;
+    this.travel += motion.distance;
+    this.clock += simulationSeconds;
+    this.uniforms.uBlur.value = motion.blur;
+    this.clusters.material.transparent = true;
+    this.clusters.material.depthWrite = false;
+    this.clusters.material.opacity = 1 - motion.blur;
+    this.streaks.visible = motion.speed > 5;
+    this.streakMaterial.opacity = Math.min(0.3, motion.speed / 2200);
+    const trailLength = Math.min(180, Math.max(0.2, motion.speed / 45));
+    for (let i = 0; i < 120; i++) {
+      const angle = i * 2.3999632297;
+      const z = 25 - ((((i * 47.71 - this.travel) % 320) + 320) % 320);
+      this.dummy.position.set(
+        Math.cos(angle) * 9.65,
+        Math.sin(angle) * 9.65,
+        z,
+      );
+      this.dummy.rotation.set(0, 0, angle);
+      this.dummy.scale.set(1, 1, trailLength);
+      this.dummy.updateMatrix();
+      this.streaks.setMatrixAt(i, this.dummy.matrix);
+    }
+    this.streaks.instanceMatrix.needsUpdate = true;
     this.uniforms.uStage.value = interiorStage(depth);
     this.uniforms.uTravel.value = this.travel;
     this.uniforms.uTime.value = this.clock;

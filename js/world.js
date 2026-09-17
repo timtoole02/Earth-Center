@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { R, SHELLS } from "./physics.js";
 import { Interior } from "./interior.js";
+import { visualMotion, wrapDistance } from "./visual-motion.js";
 export class World {
   constructor(container) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -302,7 +303,24 @@ export class World {
     this.cockpit.add(rimLight);
     this.shaft.add(this.cockpit);
   }
-  render(state, dt, running) {
+  render(state, dt, running, distanceMeters = 0, simulationSeconds = 0) {
+    const motion = visualMotion(distanceMeters, dt);
+    this.offset = wrapDistance(this.offset + motion.distance, 24);
+    this.interior.update(
+      Math.max(0, R - Math.abs(state.x)),
+      motion,
+      simulationSeconds,
+    );
+    this.rings.forEach((ring, i) => {
+      ring.position.z = 20 - i * 24 + this.offset;
+      ring.visible = motion.blur < 0.98;
+      ring.children.forEach((mesh) => {
+        mesh.material.transparent = true;
+        mesh.material.depthWrite = false;
+        mesh.material.opacity =
+          (1 - motion.blur) * (mesh === ring.children[1] ? 0.8 : 1);
+      });
+    });
     if (this.view === "earth") {
       const narrow = innerWidth < 760;
       this.camera.position.set(
@@ -314,24 +332,6 @@ export class World {
       this.marker.position.y = (5 * state.x) / R;
       this.renderer.render(this.planet, this.camera);
     } else {
-      // Distance is compressed visually at high speed. Phase accumulation avoids jumps
-      // when speed or the time multiplier changes; physics coordinates remain unscaled.
-      if (running)
-        this.offset =
-          (this.offset +
-            dt *
-              (1 + Math.min(28, Math.sqrt(Math.abs(state.v)) * 0.3)) *
-              Math.sign(-state.v || 1)) %
-          24;
-      this.rings.forEach((ring, i) => {
-        ring.position.z = 20 - i * 24 + this.offset;
-      });
-      this.interior.update(
-        Math.max(0, R - Math.abs(state.x)),
-        dt,
-        running,
-        state.v,
-      );
       this.shaft.fog.color.set(0x10191d);
       this.shaft.fog.density = 0.009;
       this.shaft.background.set(0x10191d);
