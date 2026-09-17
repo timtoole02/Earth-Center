@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#091116" />
+    <title>Earth Center · A journey through our planet</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='18' fill='%23efac66'/%3E%3Ccircle cx='20' cy='20' r='8' fill='%23091116'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      { "imports": { "three": "./vendor/three.module.js" } }
+    </script>
+  </head>
+  <body>
+    <div id="scene" aria-label="3D journey through Earth"></div>
+    <div class="vignette"></div>
+    <header>
+      <a class="brand" href="./"
+        ><span class="brand-mark">⊕</span
+        ><span>EARTH CENTER<small>A GRAVITY EXPEDITION</small></span></a
+      >
+      <div class="top-right">
+        <span class="live-dot"></span
+        ><span id="mission-status">EXPEDITION READY</span
+        ><button id="help" aria-label="Open science and controls">?</button>
+      </div>
+    </header>
+    <main>
+      <aside class="left-panel">
+        <div class="eyebrow">MISSION 001 / THROUGH THE EARTH</div>
+        <h1>A world<br />beneath you.</h1>
+        <p class="intro-copy">
+          One shaft. Two horizons.<br />Let gravity take you through.
+        </p>
+        <div class="journey-card">
+          <div class="section-label">
+            YOUR POSITION <span id="side-label">ENTRY SIDE</span>
+          </div>
+          <canvas
+            id="map"
+            width="440"
+            height="440"
+            aria-label="Earth cross-section showing capsule position"
+          ></canvas>
+          <div class="map-caption">
+            <span id="layer-name">CRUST</span
+            ><span id="progress-label">0% OF DIAMETER</span>
+          </div>
+        </div>
+        <div class="milestones">
+          <div class="section-label">
+            EXPEDITION LOG <span id="milestone-count">0 / 5</span>
+          </div>
+          <ol id="milestone-list">
+            <li data-depth="35000">
+              <i></i><span>Leave the crust</span><b>35 km</b>
+            </li>
+            <li data-depth="660000">
+              <i></i><span>Lower mantle</span><b>660 km</b>
+            </li>
+            <li data-depth="2891000">
+              <i></i><span>Enter the core</span><b>2,891 km</b>
+            </li>
+            <li data-depth="6371000">
+              <i></i><span>Cross the center</span><b>6,371 km</b>
+            </li>
+            <li data-depth="12741900">
+              <i></i><span>The other side</span><b>12,742 km</b>
+            </li>
+          </ol>
+        </div>
+      </aside>
+      <section class="view-label">
+        <span id="view-kicker">PLANET VIEW</span>
+        <h2 id="view-title">12,742 km. Straight through.</h2>
+        <p id="view-note">
+          An impossible tunnel. A real question about gravity.
+        </p>
+      </section>
+      <aside class="telemetry">
+        <div class="section-label">
+          CAPSULE TELEMETRY <span class="live-dot"></span>
+        </div>
+        <div class="metric">
+          <label>DEPTH BELOW SURFACE</label
+          ><strong id="depth">0.0 <small>km</small></strong>
+          <div class="meter"><span id="depth-meter"></span></div>
+        </div>
+        <div class="metric">
+          <label>VELOCITY</label><strong id="speed">0 <small>m/s</small></strong
+          ><span class="metric-note" id="direction">Waiting for release</span>
+        </div>
+        <div class="metric">
+          <label>GRAVITY TOWARD CENTER</label
+          ><strong id="gravity">1.00 <small>g</small></strong
+          ><span class="metric-note" id="gravity-note"
+            >Weightless once in free fall</span
+          >
+        </div>
+        <div class="clock-row">
+          <label>MISSION TIME</label><strong id="elapsed">00:00</strong>
+        </div>
+        <div class="clock-row">
+          <label>PEAK SPEED</label><strong id="peak">0 m/s</strong>
+        </div>
+        <div class="prediction" id="prediction"></div>
+      </aside>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <section class="launch-card" id="launch-card">
+        <span class="eyebrow">READY WHEN YOU ARE</span>
+        <h2>Take the leap.</h2>
+        <p>
+          Fall through the mantle, cross a weightless center, and rise toward
+          the other side.
+        </p>
+        <button id="launch" class="primary">Begin descent <span>↓</span></button
+        ><small>Starts at 60× time · about 40 seconds across</small>
+      </section>
+      <section class="result-card" id="result" hidden>
+        <span class="eyebrow">EXPEDITION COMPLETE</span>
+        <h2>Another side of the world.</h2>
+        <p id="result-text"></p>
+        <button class="primary" id="continue">Keep falling ↔</button
+        ><button class="quiet" id="again">New expedition</button>
+      </section>
+    </main>
+    <footer>
+      <div class="controls-row">
+        <div class="view-tabs" aria-label="Camera view">
+          <button id="view-shaft">1 <span>Descent</span></button
+          ><button id="view-earth" class="active">
+            2 <span>Earth cutaway</span>
+          </button>
+        </div>
+        <div class="transport">
+          <button id="pause" disabled>Ⅱ Pause</button
+          ><button id="reset" title="Reset expedition">↺ Reset</button>
+        </div>
+        <div class="rate-control">
+          <label for="rate">TIME</label
+          ><select id="rate">
+            <option value="1">1× real time</option>
+            <option value="10">10×</option>
+            <option value="60" selected>60×</option>
+            <option value="240">240×</option>
+          </select>
+        </div>
+        <button id="sound">Sound off</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <label for="model">EARTH MODEL</label
+          ><select id="model">
+            <option value="layered">Layered density</option>
+            <option value="uniform">Uniform density</option></select
+          ><label for="medium">TUNNEL</label
+          ><select id="medium">
+            <option value="vacuum">Vacuum</option>
+            <option value="air">Controlled air</option>
+          </select>
+        </div>
+        <span class="key-hint"
+          >DRAG TO LOOK <b>·</b> ESC / P TO PAUSE <b>·</b> CURSOR ALWAYS
+          FREE</span
+        >
+      </div>
+    </footer>
+    <dialog id="help-dialog">
+      <button class="close" id="close-help" aria-label="Close explanation">
+        ×</button
+      ><span class="eyebrow">THE SCIENCE OF THE FALL</span>
+      <h2>Gravity doesn't end<br />at the surface.</h2>
+      <p>
+        Inside a spherical planet, the layers outside your radius cancel out.
+        Only the mass closer to the center pulls you inward:
+        <strong>g = G M(r) / r²</strong>. At the center, gravity is zero, but
+        your speed is greatest. Your momentum carries you through, and gravity
+        then slows you down.
+      </p>
+      <p>
+        In a vacuum with no energy losses, you reach the opposite surface and
+        fall back again. Uniform density gives a crossing of about 42 minutes.
+        Our simplified five-shell Earth has denser core layers and a different
+        crossing time, calculated by the same simulation.
+      </p>
+      <h3>Try an experiment</h3>
+      <p>
+        Compare the two Earth models. Then try controlled air: drag removes
+        energy, so you won't reach the opposite surface. The simulated 90 kg
+        capsule has Cd × area = 0.7 m²; air density is held at 1.225 kg/m³
+        throughout. This is an engineered comparison, not Earth's natural
+        underground atmosphere.
+      </p>
+      <h3>Controls</h3>
+      <p>
+        <strong>1 / 2</strong> switch views. Drag the scene to look around.
+        <strong>Space</strong> launches or toggles pause.
+        <strong>Escape / P</strong> pauses. Resume with the button. The time
+        selector changes playback speed, not gravity. Model changes reset the
+        expedition.
+      </p>
+      <h3>Our impossible engineering</h3>
+      <p>
+        A straight, insulated, supported shaft and capsule are assumed. Earth's
+        rotation, tunnel-wall collisions, pressure, heating, and structural
+        failure are omitted. Layer colors illustrate geology; the shaft view
+        adapts its distance scale for comfortable viewing. Telemetry always uses
+        physical distances and seconds. The layered model uses approximate
+        constant densities normalized to 9.81 m/s² at the surface; it is not the
+        full PREM model.
+      </p>
+      <p class="sources">
+        Background:
+        <a
+          href="https://arxiv.org/abs/1308.1342"
+          target="_blank"
+          rel="noreferrer"
+          >Klotz, The Gravity Tunnel in a Non-Uniform Earth</a
+        >
+        ·
+        <a
+          href="https://science.nasa.gov/earth/facts/"
+          target="_blank"
+          rel="noreferrer"
+          >NASA: Earth facts</a
+        >
+      </p>
+    </dialog>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
