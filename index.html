@@ -111,12 +111,12 @@
       <div id="toast" role="status" aria-live="polite"></div>
       <section class="launch-card" id="launch-card">
         <span class="eyebrow">READY WHEN YOU ARE</span>
-        <h2>Take the leap.</h2>
+        <h2>Your capsule is waiting.</h2>
         <p>
-          Fall through the mantle, cross a weightless center, and rise toward
-          the other side.
+          Join the boarding line, step into your glass capsule, and take the
+          ride through your world.
         </p>
-        <button id="launch" class="primary">Begin descent <span>↓</span></button
+        <button id="launch" class="primary">Start dive <span>↓</span></button
         ><small>Starts at 60× time · about 40 seconds across</small>
       </section>
       <section class="result-card" id="result" hidden>
@@ -148,9 +148,11 @@
             <option value="240">240×</option>
           </select>
         </div>
+        <button id="hide-hud">H · Hide instruments</button>
         <button id="sound">Sound off</button>
       </div>
       <div class="settings-row">
+        <button id="replay-intro">Replay arrival</button>
         <div>
           <label for="model">EARTH MODEL</label
           ><select id="model">
@@ -206,7 +208,10 @@
       <p>
         A straight, insulated, supported shaft and capsule are assumed. Earth's
         rotation, tunnel-wall collisions, pressure, heating, and structural
-        failure are omitted. Layer colors illustrate geology; the shaft view
+        failure are omitted. The transparent tube reveals an illuminated
+        artistic cross-section: rock and mineral seams, hot mostly-solid mantle,
+        liquid outer-core metal, and an illustrative crystalline solid inner
+        core. These are not photographs of Earth’s interior. The shaft view
         adapts its distance scale for comfortable viewing. Telemetry always uses
         physical distances and seconds. The layered model uses approximate
         constant densities normalized to 9.81 m/s² at the surface; it is not the
@@ -229,6 +234,12 @@
         >
       </p>
     </dialog>
+    <div id="cinematic-fade"></div>
+    <div id="film-controls">
+      <button id="intro-pause">Pause film</button
+      ><button id="skip-intro">Skip sequence →</button>
+    </div>
+    <div id="intro-caption" aria-live="polite"></div>
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

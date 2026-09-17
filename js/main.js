@@ -1,4 +1,6 @@
+import { Arrival } from "./arrival.js";
 import { World } from "./world.js";
+import { interiorDescription } from "./interior.js";
 import { AudioEngine } from "./audio.js";
 import {
   R,
@@ -47,6 +49,9 @@ const forecasts = {
   uniform: forecast("uniform"),
 };
 const items = [...document.querySelectorAll("#milestone-list li")];
+const arrival = new Arrival(world);
+let shipDiscovered = false,
+  shipAnnounced = false;
 function toast(message) {
   $("toast").textContent = message;
   $("toast").classList.add("show");
@@ -65,19 +70,22 @@ function setRunning(value) {
 }
 function view(name) {
   world.setView(name);
+  document.body.classList.toggle("in-shaft", name === "shaft");
   $("view-shaft").classList.toggle("active", name === "shaft");
   $("view-earth").classList.toggle("active", name === "earth");
   $("view-kicker").textContent =
-    name === "shaft" ? "CAPSULE VIEW / FORWARD" : "PLANET VIEW";
+    name === "shaft" ? "CAPSULE VIEW / GLASS OBSERVATORY" : "PLANET VIEW";
   $("view-title").textContent =
     name === "shaft" ? "Into the unknown." : "12,742 km. Straight through.";
   $("view-note").textContent =
     name === "shaft"
-      ? "Engineered shaft · distance scale adapts with speed"
+      ? "Transparent tube · illuminated geological illustration"
       : "True-scale layers · capsule position shown along the diameter";
 }
 function reset() {
   state = createState();
+  shipDiscovered = false;
+  shipAnnounced = false;
   deepest = 0;
   started = false;
   completed = false;
@@ -88,28 +96,85 @@ function reset() {
   $("result").hidden = true;
   $("toast").classList.remove("show");
   world.offset = 0;
+  world.interior.travel = 0;
+  world.interior.clock = 0;
   view("earth");
+  arrival.ready();
+  enterTerminal();
   updateHUD();
 }
-function launch() {
+function beginFall(play = true) {
   started = true;
   $("launch-card").hidden = true;
   $("pause").disabled = false;
-  setRunning(true);
+  arrival.phase = "done";
+  document.body.classList.remove("cinematic", "at-terminal");
+  $("cinematic-fade").style.opacity = 0;
+  setRunning(play);
   view("shaft");
-  toast("Release confirmed · let gravity do the work");
+  toast(
+    play
+      ? "Release confirmed · let gravity do the work"
+      : "Boarding skipped · paused. Resume when ready.",
+  );
 }
+function enterTerminal() {
+  document.body.classList.remove("cinematic", "in-shaft");
+  document.body.classList.add("at-terminal");
+  $("launch-card").hidden = false;
+  $("cinematic-fade").style.opacity = 0;
+  $("mission-status").textContent = "WELCOME TO EARTH CENTER";
+}
+function launch() {
+  if (arrival.phase === "boarding") return;
+  setRunning(false);
+  arrival.board();
+  document.body.classList.remove("at-terminal", "in-shaft");
+  document.body.classList.add("cinematic");
+  $("launch-card").hidden = true;
+  $("intro-pause").textContent = "Pause film";
+}
+function skipFilm(escape = false) {
+  const before = arrival.phase;
+  arrival.skip();
+  if (before === "arrival") enterTerminal();
+  if (before === "boarding") beginFall(!escape);
+}
+function pauseFilm() {
+  arrival.paused = !arrival.paused;
+  $("intro-pause").textContent = arrival.paused ? "Resume film" : "Pause film";
+}
+$("skip-intro").onclick = () => skipFilm();
+$("intro-pause").onclick = pauseFilm;
+$("replay-intro").onclick = () => {
+  reset();
+  arrival.start();
+  $("intro-pause").textContent = "Pause film";
+  document.body.classList.remove("at-terminal");
+  document.body.classList.add("cinematic");
+  $("launch-card").hidden = true;
+};
 function predict() {
   const f = forecasts[model];
   document.querySelector("#launch-card small").textContent = air
     ? `${rate}× time · drag slows the journey`
-    : `${rate}× time · about ${Math.ceil(f.transitTime / rate)} real seconds across`;
+    : `${rate}× falling time · brief discovery slow-motion`;
   $("prediction").innerHTML = air
     ? "CONTROLLED AIR<br>Drag dissipates energy.<br><b>The far surface is out of reach.</b>"
     : `VACUUM FORECAST<br>Center <b>${clock(f.centerTime)}</b> · other side <b>${clock(f.transitTime)}</b><br>Peak <b>${fmt(f.maxSpeed / 1000, 2)} km/s</b>`;
 }
 function updateHUD() {
   const depth = Math.max(0, R - Math.abs(state.x));
+  if (world.view === "shaft") {
+    const region = interiorDescription(depth);
+    $("view-title").textContent = `Inside the ${region.name.toLowerCase()}.`;
+    $("view-note").textContent = region.detail;
+    if (depth > 8000 && depth < 30000) {
+      $("view-title").textContent = "That wasn't on the map.";
+      $("view-note").textContent =
+        "Buried vessel · estimated length 160 km / 100 miles · look up";
+    }
+  }
   $("depth").innerHTML = `${fmt(depth / 1000, 1)} <small>km</small>`;
   const speed = Math.abs(state.v);
   $("speed").innerHTML =
@@ -220,6 +285,13 @@ $("continue").onclick = () => {
   setRunning(true);
   toast("No energy lost · the journey continues");
 };
+function toggleInstruments() {
+  const hidden = document.body.classList.toggle("hide-instruments");
+  $("hide-hud").textContent = hidden
+    ? "H · Show instruments"
+    : "H · Hide instruments";
+}
+$("hide-hud").onclick = toggleInstruments;
 $("view-shaft").onclick = () => view("shaft");
 $("view-earth").onclick = () => view("earth");
 $("rate").onchange = (e) => {
@@ -250,11 +322,31 @@ $("sound").onclick = async () => {
   }
 };
 $("help").onclick = () => {
+  if (arrival.phase !== "done") {
+    arrival.paused = true;
+    $("intro-pause").textContent = "Resume film";
+  }
   if (running) setRunning(false);
   $("help-dialog").showModal();
 };
 $("close-help").onclick = () => $("help-dialog").close();
 window.addEventListener("keydown", (e) => {
+  if ($("help-dialog").open) return;
+  if (arrival.phase === "arrival" || arrival.phase === "boarding") {
+    if (e.code === "Escape") {
+      skipFilm(true);
+      e.preventDefault();
+    }
+    if (e.code === "KeyP") {
+      pauseFilm();
+      e.preventDefault();
+    }
+    if (e.code === "Space" && e.target.tagName !== "BUTTON") {
+      skipFilm();
+      e.preventDefault();
+    }
+    return;
+  }
   if (e.code === "Escape") {
     if (running) setRunning(false);
     return;
@@ -271,11 +363,16 @@ window.addEventListener("keydown", (e) => {
     if (!started) launch();
     else if ($("result").hidden) setRunning(!running);
   }
+  if (e.code === "KeyH") toggleInstruments();
   if (e.code === "Digit1") view("shaft");
   if (e.code === "Digit2") view("earth");
 });
 window.addEventListener("blur", () => {
   if (running) setRunning(false);
+  if (arrival.phase !== "done") {
+    arrival.paused = true;
+    $("intro-pause").textContent = "Resume film";
+  }
 });
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && running) setRunning(false);
@@ -285,9 +382,40 @@ let prev = performance.now(),
 function frame(now) {
   const dt = Math.min(0.05, Math.max(0, (now - prev) / 1000));
   prev = now;
+  if (arrival.phase !== "done") {
+    const before = arrival.phase;
+    const film = arrival.update(
+      document.hidden || $("help-dialog").open ? 0 : dt,
+    );
+    $("cinematic-fade").style.opacity = film.fade;
+    $("intro-caption").textContent = film.caption;
+    if (before !== "ready" && arrival.phase === "ready") enterTerminal();
+    if (before !== "done" && arrival.phase === "done") {
+      beginFall();
+      world.render(state, 0, false);
+    }
+    requestAnimationFrame(frame);
+    return;
+  }
   if (running) {
     const previousTurns = state.turns;
-    step(state, dt * rate, { model, air, stopAtAntipode: !completed });
+    const depth = R - Math.abs(state.x);
+    const shipFlyby =
+      !shipDiscovered && state.x > 0 && depth >= 8000 && depth < 30000;
+    if (!shipDiscovered && state.x > 0 && depth >= 30000) {
+      shipDiscovered = true;
+      toast("Survey anomaly logged. Absolutely nothing to see here.");
+    }
+    if (shipFlyby && !shipAnnounced) {
+      shipAnnounced = true;
+      toast("Look up. That's a 100-mile spaceship. Probably fine.");
+    }
+    const playback = shipFlyby ? Math.min(rate, 10) : rate;
+    if (shipFlyby) {
+      $("mission-status").textContent =
+        `UNSCHEDULED ARCHAEOLOGY · ${playback}×`;
+    } else $("mission-status").textContent = "EXPEDITION IN PROGRESS";
+    step(state, dt * playback, { model, air, stopAtAntipode: !completed });
     if (
       !air &&
       !completed &&
@@ -312,6 +440,8 @@ function frame(now) {
   world.render(state, dt, running);
   requestAnimationFrame(frame);
 }
+document.body.classList.add("cinematic");
+$("launch-card").hidden = true;
 predict();
 updateHUD();
 requestAnimationFrame(frame);

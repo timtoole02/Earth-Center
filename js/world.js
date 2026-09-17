@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { R, SHELLS, layerAt } from "./physics.js";
+import { R, SHELLS } from "./physics.js";
+import { Interior } from "./interior.js";
 export class World {
   constructor(container) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -32,13 +33,13 @@ export class World {
       if (!drag) return;
       this.look.x = THREE.MathUtils.clamp(
         this.look.x + (e.clientX - drag.x) * 0.003,
-        -0.65,
-        0.65,
+        -1.45,
+        1.45,
       );
       this.look.y = THREE.MathUtils.clamp(
         this.look.y + (e.clientY - drag.y) * 0.003,
-        -0.4,
-        0.4,
+        -0.85,
+        0.85,
       );
       drag = { x: e.clientX, y: e.clientY };
     });
@@ -60,6 +61,8 @@ export class World {
   }
   setView(view) {
     this.view = view;
+    this.camera.fov = view === "shaft" ? 68 : 43;
+    this.camera.updateProjectionMatrix();
     this.look = { x: 0, y: 0 };
   }
   createPlanet() {
@@ -217,50 +220,11 @@ export class World {
     this.light = new THREE.PointLight(0x99e7eb, 160, 130, 1.3);
     this.light.position.set(0, 0, 4);
     this.shaft.add(this.light);
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 256;
-    const c = canvas.getContext("2d");
-    c.fillStyle = "#77716a";
-    c.fillRect(0, 0, 256, 256);
-    let seed = 93;
-    const rand = () => {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    for (let i = 0; i < 4500; i++) {
-      const a = rand() * 0.15;
-      c.fillStyle = `rgba(${rand() > 0.5 ? "255,255,255" : "0,0,0"},${a})`;
-      c.fillRect(rand() * 256, rand() * 256, rand() * 28 + 1, rand() * 7 + 1);
-    }
-    for (let i = 0; i < 30; i++) {
-      c.strokeStyle = "#252b2944";
-      c.beginPath();
-      let y = rand() * 256;
-      c.moveTo(0, y);
-      for (let x = 0; x <= 256; x += 16) c.lineTo(x, (y += rand() * 12 - 6));
-      c.stroke();
-    }
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(5, 18);
-    texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    this.wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0x627577,
-      map: texture,
-      roughness: 0.96,
-      side: THREE.BackSide,
-    });
-    const wall = new THREE.Mesh(
-      new THREE.CylinderGeometry(10, 10, 230, 64, 1, true),
-      this.wallMaterial,
-    );
-    wall.rotation.x = Math.PI / 2;
-    wall.position.z = -100;
-    this.shaft.add(wall);
+    this.interior = new Interior(this.shaft);
     this.rings = [];
-    const ringGeometry = new THREE.TorusGeometry(9.55, 0.11, 6, 72);
+    const ringGeometry = new THREE.TorusGeometry(9.55, 0.055, 6, 72);
     const trimGeometry = new THREE.TorusGeometry(9.3, 0.026, 5, 72);
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < 13; i++) {
       const group = new THREE.Group();
       group.add(
         new THREE.Mesh(
@@ -285,10 +249,10 @@ export class World {
       this.shaft.add(group);
       this.rings.push(group);
     }
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI) / 4;
+    for (let i = 0; i < 4; i++) {
+      const a = Math.PI / 4 + (i * Math.PI) / 2;
       const rail = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.07, 0.07, 230, 6),
+        new THREE.CylinderGeometry(0.035, 0.035, 230, 6),
         new THREE.MeshStandardMaterial({
           color: 0x415f67,
           metalness: 0.7,
@@ -321,7 +285,7 @@ export class World {
     // A compact capsule frame stays with the camera; no simulated lateral collision.
     this.cockpit = new THREE.Group();
     const rim = new THREE.Mesh(
-      new THREE.TorusGeometry(7.4, 0.24, 10, 80),
+      new THREE.TorusGeometry(7.4, 0.09, 10, 80),
       new THREE.MeshStandardMaterial({
         color: 0x1b3038,
         metalness: 0.7,
@@ -358,20 +322,29 @@ export class World {
             dt *
               (1 + Math.min(28, Math.sqrt(Math.abs(state.v)) * 0.3)) *
               Math.sign(-state.v || 1)) %
-          8;
+          24;
       this.rings.forEach((ring, i) => {
-        ring.position.z = 8 - i * 8 + this.offset;
+        ring.position.z = 20 - i * 24 + this.offset;
       });
-      const col = new THREE.Color(layerAt(state.x).color);
-      this.wallMaterial.color.lerp(col, 0.045);
-      this.shaft.fog.color.copy(this.wallMaterial.color).multiplyScalar(0.06);
-      this.shaft.background.copy(this.shaft.fog.color);
+      this.interior.update(
+        Math.max(0, R - Math.abs(state.x)),
+        dt,
+        running,
+        state.v,
+      );
+      this.shaft.fog.color.set(0x10191d);
+      this.shaft.fog.density = 0.009;
+      this.shaft.background.set(0x10191d);
       const farSide = state.x < 0;
       this.exit.material.opacity = farSide
         ? THREE.MathUtils.smoothstep(Math.abs(state.x) / R, 0.93, 1)
         : 0;
       this.camera.position.set(0, 0, 3);
-      this.camera.lookAt(this.look.x * 12, -this.look.y * 12, -25);
+      this.camera.lookAt(
+        Math.sin(this.look.x) * Math.cos(this.look.y) * 30,
+        -Math.sin(this.look.y) * 30,
+        3 - Math.cos(this.look.x) * Math.cos(this.look.y) * 30,
+      );
       this.cockpit.quaternion.copy(this.camera.quaternion);
       this.cockpit.position.copy(this.camera.position);
       this.renderer.render(this.shaft, this.camera);

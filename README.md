@@ -4,7 +4,7 @@
 
 A playable gravity expedition through a hole spanning Earth's diameter. Release your capsule, descend through the mantle and core, cross the center, and rise toward the opposite surface. Switch between the capsule's view down the shaft and a planetary cutaway while watching the physics unfold.
 
-![Earth Center: cutaway planet and expedition controls](docs/images/earth-center.png)
+![Arrival at the glass Earth Center visitor complex](docs/images/arrival.png)
 
 ## Play locally
 
@@ -22,19 +22,25 @@ Use HTTP rather than opening `index.html` directly. Change the port in both the 
 
 ## Your expedition
 
-1. Choose **Layered density** or **Uniform density**, and **Vacuum** or **Controlled air**.
-2. Select **Begin descent**. The default 60× time scale makes a vacuum crossing take roughly 40 seconds of playback.
-3. Watch the shaft walls change through the layers. Switch to **Earth cutaway** to see your position across the entire planet.
+1. Watch the space-to-Earth arrival or skip to the visitor complex. Choose **Layered density** or **Uniform density**, and **Vacuum** or **Controlled air**.
+2. Select **Start dive** to enter the themed queue. Your character boards a glass capsule, the doors close, and it lowers to the release hatch before the fall begins.
+3. Look through the transparent observation tube at fractured rock, mineral clusters, glowing mantle seams, flowing outer-core metal, and a crystalline inner-core illustration. Drag sideways for a closer look. Switch to **Earth cutaway** to see your position across the entire planet.
 4. Reach the five expedition milestones. At the far surface, the vacuum expedition pauses at the turning point.
 5. Select **Keep falling** to release the surface catch and fall back again, or start a new experiment.
 
 ![Capsule view descending through Earth's engineered shaft](docs/images/descent.png)
 
+The 12-second arrival and 11-second boarding sequence are skippable. **Escape** skips arrival to the terminal; during boarding, it enters the game paused. **Skip sequence** during boarding goes straight to the active fall. **P** or **Pause film** pauses the cinematic. **Replay arrival** starts the visit again.
+
+Look up in the crust: an absurdly large buried alien vessel has an estimated in-world length of **160 km (about 100 miles)**. The first inbound encounter briefly limits playback to 10×, then restores your selected rate. It is a fictional easter egg; its geometry uses the same compressed visual scale as the surrounding geology. The onboard survey team insists it is “definitely a rock.”
+
+![Boarding the glass observation capsule](docs/images/boarding.png)
+
 ## Controls
 
 | Input                          | Action                                                |
 | ------------------------------ | ----------------------------------------------------- |
-| Begin descent / Space          | Release the capsule                                   |
+| Start dive / Space             | Start the boarding sequence                           |
 | 1                              | Capsule descent view                                  |
 | 2                              | Earth cutaway view                                    |
 | Left mouse button + drag       | Look around the scene                                 |
@@ -49,9 +55,11 @@ Use HTTP rather than opening `index.html` directly. Change the port in both the 
 
 The cursor is always free; pointer lock is never requested. Changing tabs or leaving the browser window automatically pauses an active fall. Closing the science guide leaves the expedition paused until you resume.
 
+Press **H** or **Hide instruments** for an unobstructed look through the glass. The controls remain available.
+
 ## Physics
 
-All physics uses meters, seconds, and kilograms. Time acceleration changes how much simulation time advances, not the forces.
+All physics uses meters, seconds, and kilograms. Time acceleration changes how much simulation time advances, not the forces. The buried-ship encounter temporarily caps it at 10× for a closer look; the actual rate is shown in the mission status.
 
 The capsule moves along a diameter of a stationary, spherical Earth with radius **6,371 km**. By the shell theorem, exterior spherical shells cancel; only enclosed mass contributes:
 
@@ -72,7 +80,7 @@ Gravity uses velocity Verlet integration with steps no larger than 0.2 simulated
 
 ### Engineering assumptions
 
-The straight shaft is supported and insulated, and the capsule remains on its axis. Rotation, Coriolis forces, collisions, heating, pressure, and structural failure are omitted. Geological colors and capsule sounds are illustrative. The shaft view compresses distance at high speeds for comfortable viewing; the cutaway position and instruments use physical coordinates. This is an experiment in gravitational motion, not a feasible tunnel design.
+The straight shaft is supported and insulated, and the capsule remains on its axis. Rotation, Coriolis forces, collisions, heating, pressure, and structural failure are omitted. The transparent observation tube exposes an illuminated artistic cross-section. Mineral shapes, glowing seams, metal flow, and inner-core crystal patterns are illustrative, not imagery of Earth’s interior. The mantle is mostly solid rock; the outer core is liquid and the inner core is solid. Capsule sounds are illustrative. The shaft view compresses distance at high speeds for comfortable viewing; the cutaway position and instruments use physical coordinates. This is an experiment in gravitational motion, not a feasible tunnel design.
 
 Background reading: [Klotz, _The Gravity Tunnel in a Non-Uniform Earth_](https://arxiv.org/abs/1308.1342) and [NASA: Earth facts](https://science.nasa.gov/earth/facts/).
 
@@ -90,7 +98,9 @@ Tests check the analytic uniform-density solution, energy conservation over repe
 ```text
 index.html / styles.css   Mission interface and responsive layout
 js/physics.js            Enclosed mass, gravity, potential, integration, forecasts
-js/world.js              Earth cutaway, animated shaft, camera, reused Earth texture
+js/world.js              Earth cutaway, observation tube, camera, reused Earth texture
+js/interior.js           Animated geology, glass, minerals, and buried spaceship
+js/arrival.js            Space arrival, visitor complex, guests, and capsule boarding
 js/main.js               Expedition state, controls, milestones, telemetry, map
 js/audio.js              Procedural capsule ambience
 assets/ / vendor/        Earth texture and Three.js
